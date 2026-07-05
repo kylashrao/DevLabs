@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regex Tester – Free Online Regular Expression Tester & Debugger | DevLabs</title>
+<meta name="description" content="Free online regex tester. Test patterns against real text with live match highlighting, capture groups, named groups, and a replace preview. Runs entirely in your browser.">
+<link rel="canonical" href="https://devlabs.dev/regex-tester.html">
+<meta property="og:title" content="Regex Tester – DevLabs">
+<meta property="og:description" content="Test regular expressions live with match highlighting, groups, and replace preview. Free and private.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "DevLabs Regex Tester",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any (runs in browser)",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+  "description": "Free browser-based regex tester with live match highlighting, capture groups, and replace preview."
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type":"Question","name":"Why does the match list show all matches even without the g flag checked?",
+     "acceptedAnswer":{"@type":"Answer","text":"For testing purposes, DevLabs always searches for every match in your test string so you can see the full picture. In your actual code, remember you still need the g flag if you want String.match or a matchAll loop to return more than the first result."}},
+    {"@type":"Question","name":"What happens if my pattern is too slow?",
+     "acceptedAnswer":{"@type":"Answer","text":"Patterns with nested quantifiers, like (a+)+, can cause catastrophic backtracking that would otherwise freeze the page. DevLabs runs matching in a background worker with a timeout, so a runaway pattern is stopped automatically with a warning instead of locking up your browser tab."}}
+  ]
+}
+</script>
+<style>
+  :root{
+    --paper:#F4F7FA; --paper-light:#FFFFFF; --ink:#12233D; --ink-soft:#3D546E;
+    --blue:#2B6CB0; --amber:#D97706; --green:#15803D; --red:#B91C1C;
+    --graphite:#6B7684; --border:rgba(18,35,61,0.14);
+    --mono:'JetBrains Mono','Courier New',monospace;
+    --sans:'Inter',-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;color:var(--ink);font-family:var(--sans);line-height:1.55;
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(rgba(43,108,176,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(43,108,176,0.06) 1px, transparent 1px);
+    background-size:28px 28px;
+  }
+  a{color:inherit;}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 24px;}
+
+  header.site{border-bottom:1px solid var(--border);background:rgba(244,247,250,0.92);backdrop-filter:blur(6px);position:sticky;top:0;z-index:50;}
+  .site-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 0;}
+  .brand{font-family:var(--mono);font-weight:700;font-size:1.2rem;text-decoration:none;color:var(--ink);}
+  .brand span{color:var(--blue);}
+  nav.tools-nav{display:flex;gap:20px;font-family:var(--mono);font-size:0.74rem;}
+  nav.tools-nav a{text-decoration:none;color:var(--ink-soft);}
+  nav.tools-nav a:hover{color:var(--blue);}
+  nav.tools-nav a.active{color:var(--blue);}
+
+  .page-head{padding:38px 0 6px;}
+  .eyebrow{font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em;font-size:0.76rem;color:var(--blue);margin-bottom:10px;}
+  h1{font-family:var(--mono);font-size:clamp(1.7rem,3.4vw,2.3rem);font-weight:700;margin:0 0 10px;}
+  .lede{color:var(--ink-soft);max-width:70ch;margin:0 0 24px;}
+
+  .panel{background:var(--paper-light);border:1px solid var(--border);border-radius:4px;position:relative;}
+  .panel::before, .panel::after{content:'';position:absolute;width:12px;height:12px;border-color:var(--blue);}
+  .panel::before{top:-1px;left:-1px;border-top:2px solid;border-left:2px solid;}
+  .panel::after{bottom:-1px;right:-1px;border-bottom:2px solid;border-right:2px solid;}
+
+  .pattern-panel{padding:18px;margin-bottom:16px;}
+  .fallback-notice{
+    display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border-radius:4px;
+    font-size:0.88rem;line-height:1.5;color:var(--ink-soft);
+    background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.25);margin-bottom:16px;
+  }
+  .fallback-notice strong{color:var(--amber);display:block;margin-bottom:2px;}
+  .pattern-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:1rem;flex-wrap:wrap;}
+  .slash{color:var(--graphite);font-weight:700;}
+  #patternInput{
+    flex:1;min-width:180px;border:none;outline:none;background:transparent;
+    font-family:var(--mono);font-size:1rem;color:var(--ink);padding:6px 4px;border-bottom:1px solid var(--border);
+  }
+  #patternInput:focus{border-color:var(--blue);}
+  .flags-group{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:0.78rem;color:var(--ink-soft);}
+  .flag-toggle{display:flex;align-items:center;gap:4px;cursor:pointer;}
+  .flag-toggle input{cursor:pointer;}
+
+  .status-banner{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:4px;font-family:var(--mono);font-size:0.84rem;margin-top:14px;}
+  .status-banner.valid{background:rgba(21,128,61,0.08);color:var(--green);border:1px solid rgba(21,128,61,0.25);}
+  .status-banner.invalid{background:rgba(185,28,28,0.07);color:var(--red);border:1px solid rgba(185,28,28,0.25);}
+  .status-banner.warn{background:rgba(217,119,6,0.08);color:var(--amber);border:1px solid rgba(217,119,6,0.25);}
+  .status-banner.idle{background:var(--paper);color:var(--graphite);border:1px solid var(--border);}
+  .status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .status-banner.valid .status-dot{background:var(--green);}
+  .status-banner.invalid .status-dot{background:var(--red);}
+  .status-banner.warn .status-dot{background:var(--amber);}
+  .status-banner.idle .status-dot{background:var(--graphite);}
+
+  .work-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+  .col-panel{padding:18px;}
+  .col-label{font-family:var(--mono);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--graphite);margin-bottom:10px;display:flex;justify-content:space-between;}
+  textarea#testStringBox{
+    width:100%;min-height:220px;border:none;outline:none;resize:vertical;
+    font-family:var(--mono);font-size:0.88rem;color:var(--ink);line-height:1.7;background:transparent;
+  }
+  #highlightBox{
+    min-height:220px;font-family:var(--mono);font-size:0.88rem;line-height:1.7;
+    white-space:pre-wrap;word-break:break-word;color:var(--ink);
+  }
+  #highlightBox mark{background:rgba(43,108,176,0.22);color:var(--ink);border-radius:2px;padding:0 1px;}
+  #highlightBox mark.alt{background:rgba(217,119,6,0.22);}
+  .placeholder{color:var(--graphite);font-style:italic;}
+
+  .matches-panel{padding:18px;margin-bottom:18px;}
+  .matches-panel .col-label{margin-bottom:12px;}
+  .match-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--border);font-family:var(--mono);font-size:0.84rem;}
+  .match-row:last-child{border-bottom:none;}
+  .match-text{color:var(--blue);font-weight:600;word-break:break-word;}
+  .match-meta{color:var(--graphite);white-space:nowrap;}
+  .groups-line{font-family:var(--mono);font-size:0.78rem;color:var(--ink-soft);margin-top:3px;}
+
+  .replace-panel{padding:18px;margin-bottom:36px;}
+  #replaceInput{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:3px;background:var(--paper);font-family:var(--mono);font-size:0.88rem;color:var(--ink);margin-bottom:14px;}
+  #replaceInput:focus{outline:2px solid var(--blue);outline-offset:1px;}
+  #replaceOutput{font-family:var(--mono);font-size:0.86rem;white-space:pre-wrap;word-break:break-word;line-height:1.65;background:var(--paper);border:1px solid var(--border);border-radius:3px;padding:14px;}
+
+  .cheatsheet{padding:8px 0 12px;}
+  .cheat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;}
+  .cheat-item{
+    background:var(--paper-light);border:1px solid var(--border);border-radius:3px;padding:12px 14px;
+    cursor:pointer;font-family:var(--mono);font-size:0.8rem;text-align:left;
+  }
+  .cheat-item:hover{border-color:var(--blue);}
+  .cheat-item .cheat-name{font-weight:700;color:var(--ink);display:block;margin-bottom:4px;}
+  .cheat-item .cheat-pattern{color:var(--blue);word-break:break-all;}
+
+  .ref-table{width:100%;border-collapse:collapse;font-size:0.88rem;margin-top:16px;}
+  .ref-table th{text-align:left;font-family:var(--mono);text-transform:uppercase;font-size:0.68rem;letter-spacing:0.05em;color:var(--graphite);border-bottom:1px solid var(--border);padding:9px 10px;}
+  .ref-table td{padding:10px;border-bottom:1px dashed var(--border);color:var(--ink-soft);}
+  .ref-table td:first-child{font-family:var(--mono);font-weight:600;color:var(--ink);white-space:nowrap;}
+
+  section.explain{padding:40px 0 8px;}
+  .section-head h2{font-family:var(--mono);font-size:1.4rem;font-weight:700;margin:0 0 10px;}
+  .section-head p{color:var(--ink-soft);max-width:70ch;}
+
+  .faq{padding:40px 0 72px;}
+  details{border-bottom:1px solid var(--border);padding:16px 0;}
+  summary{font-family:var(--mono);font-size:1rem;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;}
+  summary::-webkit-details-marker{display:none;}
+  summary::after{content:'+';color:var(--blue);font-size:1.2rem;}
+  details[open] summary::after{content:'–';}
+  details p{color:var(--ink-soft);margin:10px 0 0;max-width:66ch;font-size:0.94rem;}
+
+  footer{border-top:1px solid var(--border);padding:26px 0;font-family:var(--mono);font-size:0.8rem;color:var(--graphite);background:rgba(244,247,250,0.92);}
+  footer .foot-row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+  footer a{text-decoration:none;color:var(--ink-soft);margin-right:16px;}
+  footer a:hover{color:var(--blue);}
+
+  @media(max-width:900px){
+    .work-grid{grid-template-columns:1fr;}
+    .cheat-grid{grid-template-columns:1fr 1fr;}
+    nav.tools-nav{display:none;}
+  }
+  @media(max-width:560px){ .cheat-grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap site-nav">
+    <a href="/" class="brand">Dev<span>Labs</span></a>
+    <nav class="tools-nav">
+      <a href="/json-formatter.html">JSON Formatter</a>
+      <a href="/jwt-decoder.html">JWT Decoder</a>
+      <a href="/regex-tester.html" class="active">Regex Tester</a>
+      <a href="/about.html">About</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap page-head">
+    <div class="eyebrow">Tool 03 · Test &amp; Debug</div>
+    <h1>Regex Tester</h1>
+    <p class="lede">Write a pattern, paste test text, and see every match highlighted live — with capture groups, named groups, and a replace preview. A runaway pattern (like nested quantifiers) is caught automatically instead of freezing your browser.</p>
+  </div>
+
+  <div class="wrap">
+    <div id="fallbackNotice" class="fallback-notice" style="display:none;">
+      <strong>Live-as-you-type is off in this browser.</strong> Background pattern matching (which lets DevLabs safely cancel a slow pattern) was blocked here, so matching now runs on the main thread instead — click "Run test" to check your pattern, and you'll be warned first if it looks like it could be slow.
+    </div>
+    <div class="panel pattern-panel">
+      <div class="pattern-row">
+        <span class="slash">/</span>
+        <input id="patternInput" type="text" placeholder="\d{3}-\d{3}-\d{4}" spellcheck="false" autocomplete="off">
+        <span class="slash" id="flagsDisplay">/g</span>
+        <div class="flags-group">
+          <label class="flag-toggle"><input type="checkbox" id="flag-i"> i</label>
+          <label class="flag-toggle"><input type="checkbox" id="flag-m"> m</label>
+          <label class="flag-toggle"><input type="checkbox" id="flag-s"> s</label>
+          <label class="flag-toggle"><input type="checkbox" id="flag-u"> u</label>
+        </div>
+        <button id="runTestBtn" class="btn" type="button" style="display:none;">Run test</button>
+      </div>
+      <div id="statusBanner" class="status-banner idle">
+        <span class="status-dot"></span>
+        <span id="statusText">Enter a pattern and some test text to begin.</span>
+      </div>
+    </div>
+
+    <div class="work-grid">
+      <div class="panel col-panel">
+        <div class="col-label"><span>Test string</span><span id="testLen">0 chars</span></div>
+        <textarea id="testStringBox" placeholder="Paste the text you want to test your pattern against…" spellcheck="false"></textarea>
+      </div>
+      <div class="panel col-panel">
+        <div class="col-label"><span>Highlighted matches</span><span id="matchCount">0 matches</span></div>
+        <div id="highlightBox"><span class="placeholder">Matches will be highlighted here.</span></div>
+      </div>
+    </div>
+
+    <div class="panel matches-panel">
+      <div class="col-label"><span>Match details</span></div>
+      <div id="matchList"><span class="placeholder">No matches yet.</span></div>
+    </div>
+
+    <div class="panel replace-panel">
+      <div class="col-label"><span>Replace preview</span></div>
+      <input id="replaceInput" type="text" placeholder="Replacement — use $1, $2, or $&lt;name&gt; for captured groups">
+      <div id="replaceOutput"><span class="placeholder">Enter a replacement above to preview the result.</span></div>
+    </div>
+
+    <div class="cheatsheet">
+      <div class="col-label" style="margin-bottom:0;">Common patterns — click to load</div>
+      <div class="cheat-grid" id="cheatGrid"></div>
+    </div>
+  </div>
+
+  <section class="explain wrap">
+    <div class="section-head">
+      <h2>Flags reference</h2>
+    </div>
+    <table class="ref-table">
+      <thead><tr><th>Flag</th><th>Name</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>g</td><td>Global</td><td>Find all matches instead of stopping at the first one. Always applied here so you can see every match; remember to add it in your own code.</td></tr>
+        <tr><td>i</td><td>Ignore case</td><td>Match letters regardless of case — "ABC" matches "abc".</td></tr>
+        <tr><td>m</td><td>Multiline</td><td>Makes ^ and $ match the start/end of each line, not just the whole string.</td></tr>
+        <tr><td>s</td><td>Dot-all</td><td>Makes . match newline characters too, which it normally doesn't.</td></tr>
+        <tr><td>u</td><td>Unicode</td><td>Treats the pattern as a sequence of Unicode code points, important for patterns matching emoji or non-Latin scripts.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="faq wrap">
+    <div class="section-head"><h2>Frequently asked questions</h2></div>
+    <details open>
+      <summary>Why does the match list show all matches even without the g flag checked?</summary>
+      <p>For testing purposes, DevLabs always searches for every match in your test string so you can see the full picture. In your actual code, you still need the g flag if you want <code>String.match</code> or a <code>matchAll</code> loop to return more than the first result.</p>
+    </details>
+    <details>
+      <summary>What happens if my pattern is too slow?</summary>
+      <p>Patterns with nested quantifiers, like <code>(a+)+</code>, can cause catastrophic backtracking — where matching time grows exponentially with input length — which would otherwise freeze the page solid. DevLabs normally runs matching in a background worker with a timeout, so a runaway pattern is stopped automatically instead of locking up your browser tab. If your browser blocks that background worker, the tool switches to a safer fallback: live-as-you-type turns off, and you'll get a warning before running any pattern that looks like it could be slow.</p>
+    </details>
+    <details>
+      <summary>Does this use JavaScript regex syntax specifically?</summary>
+      <p>Yes. Regex flavors differ slightly between languages (PCRE, Python, .NET, etc.). This tool uses your browser's native JavaScript regex engine, so results will match what you'd get from a JS <code>RegExp</code> exactly, but may differ slightly from PCRE-based tools for advanced features like lookbehind support in older engines.</p>
+    </details>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-row">
+    <div><a href="/about.html">About</a><a href="/contact.html">Contact</a><a href="/privacy.html">Privacy Policy</a></div>
+    <div>© <span id="yr"></span> DevLabs. Nothing you paste ever leaves your browser.</div>
+  </div>
+</footer>
+
+<script>
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+/* ---------- worker source (runs matching/replacing off the main thread so a
+   catastrophic-backtracking pattern can be time-limited and terminated rather
+   than freezing the page) ---------- */
+const WORKER_SRC = `
+self.onmessage = function(e){
+  const { id, task, pattern, flags, testString, replacement } = e.data;
+  try{
+    const effectiveFlags = flags.includes('g') ? flags : flags + 'g';
+    const regex = new RegExp(pattern, effectiveFlags);
+
+    if(task === 'match'){
+      const matches = [];
+      let m;
+      let guard = 0;
+      const MAX_MATCHES = 5000;
+      while((m = regex.exec(testString)) !== null){
+        matches.push({ match: m[0], index: m.index, groups: m.slice(1), named: m.groups || null });
+        if(m.index === regex.lastIndex) regex.lastIndex++;
+        guard++;
+        if(guard > MAX_MATCHES){
+          self.postMessage({ id, matches, truncated: true });
+          return;
+        }
+      }
+      self.postMessage({ id, matches, truncated: false });
+    } else if(task === 'replace'){
+      const result = testString.replace(new RegExp(pattern, flags), replacement);
+      self.postMessage({ id, result });
+    }
+  }catch(err){
+    self.postMessage({ id, error: err.message });
+  }
+};
+`;
+
+/* ---------- direct (non-worker) implementations, used only as a fallback ---------- */
+function computeMatchesDirect(pattern, flags, testString){
+  try{
+    const effectiveFlags = flags.includes('g') ? flags : flags + 'g';
+    const regex = new RegExp(pattern, effectiveFlags);
+    const matches = [];
+    let m, guard = 0;
+    const MAX_MATCHES = 5000;
+    while((m = regex.exec(testString)) !== null){
+      matches.push({ match: m[0], index: m.index, groups: m.slice(1), named: m.groups || null });
+      if(m.index === regex.lastIndex) regex.lastIndex++;
+      guard++;
+      if(guard > MAX_MATCHES) return { matches, truncated: true };
+    }
+    return { matches, truncated: false };
+  }catch(err){
+    return { error: err.message };
+  }
+}
+function computeReplaceDirect(pattern, flags, testString, replacement){
+  try{
+    return { result: testString.replace(new RegExp(pattern, flags), replacement) };
+  }catch(err){
+    return { error: err.message };
+  }
+}
+
+// Best-effort heuristic to flag patterns likely to cause catastrophic backtracking.
+// Only used in the no-worker fallback path, where a slow match can't be force-terminated.
+function patternLooksRisky(pattern){
+  const nestedQuantifier = /\((?:[^()]|\([^()]*\))*[+*]\)[+*?]|\[[^\]]*\][+*][+*]/;
+  const repeatedAlternation = /\([^()]*\|[^()]*\)[+*]/;
+  try{
+    return nestedQuantifier.test(pattern) || repeatedAlternation.test(pattern);
+  }catch(e){
+    return false;
+  }
+}
+
+let worker = null;
+let workerBlobUrl = null;
+let workerAvailable = true;
+
+function spawnWorker(){
+  try{
+    if(workerBlobUrl) URL.revokeObjectURL(workerBlobUrl);
+    const blob = new Blob([WORKER_SRC], {type:'application/javascript'});
+    workerBlobUrl = URL.createObjectURL(blob);
+    worker = new Worker(workerBlobUrl);
+    worker.onerror = function(){
+      // an async failure (e.g. the worker script itself was blocked from loading)
+      workerAvailable = false;
+      showFallbackNotice();
+    };
+    workerAvailable = true;
+  }catch(err){
+    // synchronous construction failure — some environments block Worker(blob:) via CSP
+    worker = null;
+    workerAvailable = false;
+  }
+}
+spawnWorker();
+if(!workerAvailable) showFallbackNotice();
+
+const TIMEOUT_MS = 900;
+let requestCounter = 0;
+const pending = new Map();
+
+function onWorkerMessageHandler(e){
+  const { id } = e.data;
+  const entry = pending.get(id);
+  if(!entry) return;
+  clearTimeout(entry.timer);
+  pending.delete(id);
+  entry.resolve(e.data);
+}
+if(worker) worker.onmessage = onWorkerMessageHandler;
+
+function runTask(task, payload){
+  if(workerAvailable && worker){
+    return new Promise((resolve) => {
+      const id = ++requestCounter;
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        worker.terminate();
+        spawnWorker();
+        if(worker) worker.onmessage = onWorkerMessageHandler;
+        resolve({ id, timeout: true });
+      }, TIMEOUT_MS);
+      pending.set(id, { resolve, timer });
+      worker.postMessage({ id, task, ...payload });
+    });
+  }
+  // fallback: run synchronously on the main thread, guarded by a heuristic check
+  if(task === 'match') return Promise.resolve(computeMatchesDirect(payload.pattern, payload.flags, payload.testString));
+  if(task === 'replace') return Promise.resolve(computeReplaceDirect(payload.pattern, payload.flags, payload.testString, payload.replacement));
+  return Promise.resolve({error: 'Unknown task'});
+}
+
+/* ---------- UI wiring ---------- */
+const patternInput = document.getElementById('patternInput');
+const testStringBox = document.getElementById('testStringBox');
+const replaceInput = document.getElementById('replaceInput');
+const statusBanner = document.getElementById('statusBanner');
+const statusText = document.getElementById('statusText');
+const highlightBox = document.getElementById('highlightBox');
+const matchList = document.getElementById('matchList');
+const replaceOutput = document.getElementById('replaceOutput');
+
+const MAX_TEST_LENGTH = 20000;
+
+function currentFlags(){
+  let f = 'g';
+  if(document.getElementById('flag-i').checked) f += 'i';
+  if(document.getElementById('flag-m').checked) f += 'm';
+  if(document.getElementById('flag-s').checked) f += 's';
+  if(document.getElementById('flag-u').checked) f += 'u';
+  return f;
+}
+function updateFlagsDisplay(){
+  document.getElementById('flagsDisplay').textContent = '/' + currentFlags();
+}
+
+function setStatus(kind, text){
+  statusBanner.className = 'status-banner ' + kind;
+  statusText.textContent = text;
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderHighlight(testString, matches){
+  if(!matches.length){
+    highlightBox.textContent = testString || '';
+    return;
+  }
+  let out = '';
+  let last = 0;
+  matches.forEach((m, i) => {
+    out += escapeHtml(testString.slice(last, m.index));
+    const cls = i % 2 === 0 ? '' : ' alt';
+    const matchText = m.match.length ? escapeHtml(m.match) : '&#8203;'; // zero-width space so empty matches are still visible as a marker
+    out += `<mark class="${cls.trim()}">${matchText}</mark>`;
+    last = m.index + m.match.length;
+  });
+  out += escapeHtml(testString.slice(last));
+  highlightBox.innerHTML = out;
+}
+
+function renderMatchList(matches){
+  if(!matches.length){
+    matchList.innerHTML = '<span class="placeholder">No matches found.</span>';
+    return;
+  }
+  matchList.innerHTML = matches.map((m, i) => {
+    let groupsLine = '';
+    if(m.groups && m.groups.length){
+      groupsLine += `<div class="groups-line">Groups: ${m.groups.map((g,gi) => `$${gi+1}=${g === undefined ? '(none)' : JSON.stringify(g)}`).join('  ')}</div>`;
+    }
+    if(m.named){
+      const namedKeys = Object.keys(m.named);
+      if(namedKeys.length){
+        groupsLine += `<div class="groups-line">Named: ${namedKeys.map(k => `${k}=${JSON.stringify(m.named[k])}`).join('  ')}</div>`;
+      }
+    }
+    return `<div class="match-row"><div><span class="match-text">${escapeHtml(m.match) || '(empty match)'}</span>${groupsLine}</div><span class="match-meta">at index ${m.index}</span></div>`;
+  }).join('');
+}
+
+let debounceTimer = null;
+function scheduleUpdate(){
+  if(!workerAvailable){
+    // no background protection available — don't auto-run on every keystroke,
+    // just keep the lightweight bits current and prompt for an explicit run
+    document.getElementById('testLen').textContent = testStringBox.value.length.toLocaleString() + ' chars';
+    if(patternInput.value){
+      setStatus('idle', 'Click "Run test" to check this pattern (live-as-you-type is off in this mode — see notice above).');
+    } else {
+      setStatus('idle', 'Enter a pattern and some test text, then click "Run test".');
+    }
+    return;
+  }
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => update(false), 200);
+}
+
+function runTestButtonClicked(){
+  const pattern = patternInput.value;
+  if(!workerAvailable && patternLooksRisky(pattern)){
+    const proceed = confirm(
+      'This pattern has nested repetition (like (a+)+), which can sometimes take an extremely long time to match and — because background protection is unavailable in this mode — could freeze this tab until it finishes.\n\n' +
+      'Continue anyway?'
+    );
+    if(!proceed){
+      setStatus('warn', 'Run cancelled — pattern was flagged as potentially slow.');
+      return;
+    }
+  }
+  update(true);
+}
+
+async function update(isExplicitRun){
+  const pattern = patternInput.value;
+  const testString = testStringBox.value;
+  const flags = currentFlags();
+  updateFlagsDisplay();
+
+  document.getElementById('testLen').textContent = testString.length.toLocaleString() + ' chars';
+
+  if(!pattern){
+    setStatus('idle', workerAvailable ? 'Enter a pattern and some test text to begin.' : 'Enter a pattern and some test text, then click "Run test".');
+    highlightBox.innerHTML = testString ? escapeHtml(testString) : '<span class="placeholder">Matches will be highlighted here.</span>';
+    document.getElementById('matchCount').textContent = '0 matches';
+    matchList.innerHTML = '<span class="placeholder">No matches yet.</span>';
+    return;
+  }
+
+  if(!workerAvailable && !isExplicitRun){
+    // shouldn't normally reach here since scheduleUpdate short-circuits, but guard anyway
+    return;
+  }
+
+  if(testString.length > MAX_TEST_LENGTH){
+    setStatus('warn', `Test string is over ${MAX_TEST_LENGTH.toLocaleString()} characters — trim it down for reliable live testing.`);
+    return;
+  }
+
+  if(!workerAvailable) setStatus('idle', 'Running…');
+  const result = await runTask('match', { pattern, flags, testString });
+
+  if(result.timeout){
+    setStatus('warn', 'This pattern is taking too long to run — possibly catastrophic backtracking. Try simplifying it (nested quantifiers like (a+)+ are common culprits).');
+    highlightBox.innerHTML = '<span class="placeholder">Matching was stopped because it took too long.</span>';
+    document.getElementById('matchCount').textContent = '—';
+    matchList.innerHTML = '<span class="placeholder">—</span>';
+    return;
+  }
+  if(result.error){
+    setStatus('invalid', 'Invalid pattern — ' + result.error);
+    highlightBox.innerHTML = escapeHtml(testString);
+    document.getElementById('matchCount').textContent = '0 matches';
+    matchList.innerHTML = '<span class="placeholder">Fix the pattern to see matches.</span>';
+    return;
+  }
+
+  const { matches, truncated } = result;
+  setStatus('valid', truncated ? `Found ${matches.length}+ matches (stopped early — pattern may match too broadly).` : `${matches.length} match${matches.length===1?'':'es'} found.`);
+  renderHighlight(testString, matches);
+  document.getElementById('matchCount').textContent = matches.length.toLocaleString() + (truncated?'+':'') + ' matches';
+  renderMatchList(matches);
+
+  updateReplace(pattern, flags, testString);
+}
+
+async function updateReplace(pattern, flags, testString){
+  const replacement = replaceInput.value;
+  if(!replacement){
+    replaceOutput.innerHTML = '<span class="placeholder">Enter a replacement above to preview the result.</span>';
+    return;
+  }
+  if(!workerAvailable && patternLooksRisky(pattern)){
+    replaceOutput.innerHTML = '<span class="placeholder">Skipped automatic replace preview for a potentially slow pattern — use "Run test" above if you want to proceed anyway.</span>';
+    return;
+  }
+  const result = await runTask('replace', { pattern, flags, testString, replacement });
+  if(result.timeout){
+    replaceOutput.innerHTML = '<span class="placeholder">Replace timed out — simplify the pattern.</span>';
+    return;
+  }
+  if(result.error){
+    replaceOutput.innerHTML = '<span class="placeholder">Cannot preview — invalid pattern.</span>';
+    return;
+  }
+  replaceOutput.textContent = result.result;
+}
+
+function showFallbackNotice(){
+  const notice = document.getElementById('fallbackNotice');
+  const runBtn = document.getElementById('runTestBtn');
+  if(notice) notice.style.display = 'flex';
+  if(runBtn) runBtn.style.display = 'inline-block';
+}
+
+patternInput.addEventListener('input', scheduleUpdate);
+testStringBox.addEventListener('input', scheduleUpdate);
+replaceInput.addEventListener('input', () => {
+  if(!workerAvailable){
+    updateReplace(patternInput.value, currentFlags(), testStringBox.value);
+    return;
+  }
+  updateReplace(patternInput.value, currentFlags(), testStringBox.value);
+});
+['flag-i','flag-m','flag-s','flag-u'].forEach(id => {
+  document.getElementById(id).addEventListener('change', scheduleUpdate);
+});
+document.getElementById('runTestBtn').addEventListener('click', runTestButtonClicked);
+
+/* ---------- cheatsheet ---------- */
+const CHEATSHEET = [
+  {name:'Email address', pattern:'[\\w.+-]+@[\\w-]+\\.[\\w.-]+', sample:'Contact: hello@example.com or support@test.co.uk'},
+  {name:'URL', pattern:'https?:\\/\\/[^\\s]+', sample:'Visit https://example.com/path?q=1 for details.'},
+  {name:'IPv4 address', pattern:'\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b', sample:'Server IPs: 192.168.1.1 and 10.0.0.254'},
+  {name:'US phone number', pattern:'\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}', sample:'Call 555-123-4567 or (555) 987-6543'},
+  {name:'Hex color', pattern:'#[0-9a-fA-F]{3,6}\\b', sample:'Brand colors: #1F3A5F and #fff'},
+  {name:'ISO date (YYYY-MM-DD)', pattern:'\\b\\d{4}-\\d{2}-\\d{2}\\b', sample:'Due dates: 2026-07-04 and 2026-12-25'},
+  {name:'US ZIP code', pattern:'\\b\\d{5}(?:-\\d{4})?\\b', sample:'Mail to 94103 or 94103-1234'},
+  {name:'HTML tag', pattern:'<\\/?[a-zA-Z][^>]*>', sample:'<div class="box"><span>text</span></div>'},
+  {name:'Whitespace-only lines', pattern:'^\\s*$', sample:'line one\\n   \\nline three'}
+];
+
+const cheatGrid = document.getElementById('cheatGrid');
+cheatGrid.innerHTML = CHEATSHEET.map((c, i) => `
+  <button class="cheat-item" type="button" data-index="${i}">
+    <span class="cheat-name">${escapeHtml(c.name)}</span>
+    <span class="cheat-pattern">${escapeHtml(c.pattern)}</span>
+  </button>
+`).join('');
+
+cheatGrid.addEventListener('click', (e) => {
+  const btn = e.target.closest('.cheat-item');
+  if(!btn) return;
+  const item = CHEATSHEET[parseInt(btn.dataset.index, 10)];
+  patternInput.value = item.pattern;
+  testStringBox.value = item.sample.replace(/\\n/g, '\n');
+  document.getElementById('testLen').textContent = testStringBox.value.length.toLocaleString() + ' chars';
+  // these are curated, pre-verified safe patterns, so run immediately even in fallback mode
+  update(true);
+});
+
+updateFlagsDisplay();
+update(false);
+</script>
+</body>
+</html>
